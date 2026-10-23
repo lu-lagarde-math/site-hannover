@@ -1,0 +1,39 @@
+h1 {
+	text-align: center;
+}
+
+body{
+	background-color: #FFFFFF;
+}
+
+article{
+	float:left;
+	width:70%;
+}
+
+.avi{
+	width:100%;
+	height:auto;
+}
+
+.text-area {
+	/* width: 60%; */
+	border: 1px solid black;
+
+}
+
+.img-area {
+	float: right;
+	margin: 0 1% 1% 0;
+	width: 169px;
+	height: 169px;
+}
+.clear{
+	clear:both;
+}
+
+@media screen and (max-width: 640px){
+	body{
+		background-color: #c8a565;
+	}
+}
