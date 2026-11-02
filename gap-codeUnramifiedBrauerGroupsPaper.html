@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Lucas Lagarde">
+<title>GAP code — Unramified Brauer groups and the Grunwald problem</title>
+<style>
+  :root {
+    --bg: #1e1e1e; --panel: #252526; --text: #d4d4d4; --muted: #9a9a9a;
+    --accent: #569cd6; --border: #3a3a3a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text); margin: 0; padding: 2rem 1rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  main { max-width: 900px; margin: 0 auto; }
+  a { color: var(--accent); }
+  h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
+  h2 { font-size: 1.15rem; margin: 2.5rem 0 .5rem; }
+  .sub { color: var(--muted); margin: 0 0 1.5rem; }
+  nav ul { padding-left: 1.2rem; }
+  code { font-family: Consolas, Monaco, "Courier New", monospace; }
+  .toolbar {
+    display: flex; justify-content: space-between; align-items: center; gap: .5rem;
+    background: #2d2d2d; border: 1px solid var(--border); border-bottom: none;
+    border-radius: 8px 8px 0 0; padding: .4rem .8rem; font-size: .85rem; color: var(--muted);
+  }
+  .fname { font-family: Consolas, Monaco, "Courier New", monospace; }
+  button {
+    background: #3c3c3c; color: var(--text); border: 1px solid var(--border);
+    border-radius: 5px; padding: .2rem .7rem; font-size: .8rem; cursor: pointer; margin-left: .3rem;
+  }
+  button:hover { background: #4a4a4a; }
+  pre {
+    background: var(--panel); margin: 0; padding: 1.2rem 1.5rem;
+    border: 1px solid var(--border); border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.4);
+    overflow-x: auto; font-size: .88rem; line-height: 1.5; white-space: pre;
+  }
+  footer { margin-top: 3rem; color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>GAP code</h1>
+  <p class="sub">Accompanying codes for <em>Unramified Brauer groups of homogeneous spaces with finite
+  stabilisers and the Grunwald problem</em>,
+  <a href="https://arxiv.org/abs/2506.02600">arXiv:2506.02600</a>. Codes 1 and 2 require the GAP package <a href="https://www.gap-system.org/Packages/hap.html">HAP</a>.
+  </p>
+  <nav><ul>
+    <li><a href="#bogomolov-mod-p">GAP code 1 — <code>BogomolovMultiplierModP</code></a></li><li><a href="#example-real">GAP code 2 — the 4-fold covers of PSL<sub>3</sub>(<b>F</b><sub>4</sub>) with non-trivial Bogomolov multiplier</a></li><li><a href="#real-ramification">GAP code 3 — ramification over the field of real numbers for the 4-fold covers of PSL<sub>3</sub>(<b>F</b><sub>4</sub>)</a></li>
+  </ul></nav>
+  
+<section id="bogomolov-mod-p">
+  <h2>GAP code 1 — <code>BogomolovMultiplierModP</code></h2>
+  <p>Computes the subgroup of H<sup>2</sup>(G, <b>Z</b>/p) of classes vanishing on every abelian subgroup of G, i.e. the group Ш<sup>2</sup><sub>ab</sub>(G, <b>Z</b>/p), and returns its abelian invariants (save it as <code>BogomolovModP.g</code> so that GAP code 2 can read it). I thank Graham Ellis for writing and sharing this code to me.</p>
+  <div class="toolbar">
+    <span class="fname">BogomolovModP.g</span>
+    <span>
+      <button type="button" data-copy="bogomolov-mod-p-src">Copy</button>
+      <button type="button" data-download="bogomolov-mod-p-src" data-name="BogomolovModP.g">Download</button>
+    </span>
+  </div>
+  <pre><code id="bogomolov-mod-p-src">#####################################################
+#####################################################
+BogomolovMultiplierModP:=function(G,p)
+local R, MaxAbelian, maxab, homs, HOMS, H, gensH, newh, Kers, 
+      InducedHom, h, iso;
+
+#####Some easy cases##################
+if IsAbelian(G) then return []; fi;
+if not IsPGroup(G) then
+if GroupCohomology(G,2,2)=[] then return []; fi;
+fi;
+######################################
+R:=ResolutionGenericGroup(G,3);
+
+#####################################################
+MaxAbelian:=function(G)
+   local AbSubs, A, x, g, bool;
+   ##Probably a clumsy method for finding all maximal abelian subgroups
+   ##
+   AbSubs:=ConjugacyClassesSubgroups(G);
+   AbSubs:=Filtered(AbSubs,x-&gt;IsAbelian(Representative(x)));
+   AbSubs:=List(AbSubs,a-&gt;Representative(a));
+   AbSubs:=List(AbSubs,b-&gt;ConjugateSubgroups(G,b));
+   AbSubs:=Concatenation(AbSubs);
+   AbSubs:=Filtered(AbSubs,x-&gt;Order(x)&gt;1);
+   A:=[];
+   for g in AbSubs do
+      bool:=true;
+      for x in AbSubs do
+         if not g=x and IsSubgroup(x,g) then bool:=false; break;fi;
+      od;
+      if bool then Add(A,g); fi;
+   od;
+   return A;
+end;
+####################################################
+
+maxab:=MaxAbelian(G);
+
+####################################################
+InducedHom:=function(R,A)
+local G, S, f;
+G:=R!.group;
+S:=ResolutionFiniteGroup(A,3);
+f:=GroupHomomorphismByFunction(A,G,x-&gt;x);
+f:=EquivariantChainMap(S,R,f);
+f:=HomToIntegersModP(f,p);
+f:=Cohomology(f,2);
+
+return f;
+end;
+####################################################
+
+
+homs:=List(maxab,A-&gt;InducedHom(R,A));
+HOMS:=[];
+H:=Source(homs[1]);
+#iso:=IsomorphismPcGroup(H);
+iso:=NqEpimorphismNilpotentQuotient(H,1);
+gensH:=List(GeneratorsOfGroup(H),x -&gt; Image(iso,x));
+H:=Range(iso);
+for h in homs do
+newh:=GroupHomomorphismByImagesNC(H,Range(h),gensH, h!.MappingGeneratorsImages[2]);
+Add(HOMS,newh);
+od;
+Kers:=List(HOMS,Kernel);
+
+ return AbelianInvariants(Intersection(Kers));
+end;
+#####################################################
+#####################################################</code></pre>
+</section>
+<section id="example-real">
+  <h2>GAP code 2 — the 4-fold covers of PSL<sub>3</sub>(<b>F</b><sub>4</sub>) with non-trivial Bogomolov multiplier</h2>
+  <p>Constructs the 4-fold covers G of PSL<sub>3</sub>(<b>F</b><sub>4</sub>) with non-trivial Bogomolov multiplier B<sub>0</sub>(G) and computes Ш<sup>2</sup><sub>ab</sub>(G, <b>Z</b>/2) for them, using GAP code 1 (requires the file <code>BogomolovModP.g</code> in the working directory).</p>
+  <div class="toolbar">
+    <span class="fname">CodeExempleReel.g</span>
+    <span>
+      <button type="button" data-copy="example-real-src">Copy</button>
+      <button type="button" data-download="example-real-src" data-name="CodeExempleReel.g">Download</button>
+    </span>
+  </div>
+  <pre><code id="example-real-src">P:=PSL(3,4);
+epi:=EpimorphismSchurCover(P,[2]);
+F:=Source(epi);
+x:=PreImagesRepresentative(epi,First(GeneratorsOfGroup(SylowSubgroup(P,7)),y-&gt;Order(y)=7));
+act:=FactorCosetAction(F,Subgroup(F,[x^8]));
+Gt:=Image(act);
+M:=Image(act,Kernel(epi));
+
+#####################################################
+## 4-fold covers G=Gt/U of PSL(3,4) with non-trivial B0(G):
+## the generator of H^2(G,Z/2) (double cover Gt/U&#x27;, kernel &lt;e&gt;)
+## lies in B0(G) iff no commuting pair of G lifts to a pair with commutator e
+InB0:=function(U)
+local Up, hE, e, S2;
+Up:=First(AllSubgroups(U),H-&gt;Size(H)=2);
+hE:=NaturalHomomorphismByNormalSubgroup(Gt,Up);
+e:=Image(hE,First(Elements(U),u-&gt;not u in Up));
+S2:=Elements(SylowSubgroup(Image(hE),2));
+return not ForAny(S2,a-&gt;ForAny(S2,b-&gt;Comm(a,b)=e));
+end;
+#####################################################
+
+covers:=List(Filtered(AllSubgroups(M),U-&gt;Size(U)=4 and IsCyclic(M/U) and InB0(U)),
+             U-&gt;Image(SmallerDegreePermutationRepresentation(
+                  Image(NaturalHomomorphismByNormalSubgroup(Gt,U)))));
+Read(&quot;BogomolovModP.g&quot;);
+List(covers,G-&gt;BogomolovMultiplierModP(G,2));</code></pre>
+</section>
+<section id="real-ramification">
+  <h2>GAP code 3 — ramification over the field of real numbers for the 4-fold covers of PSL<sub>3</sub>(<b>F</b><sub>4</sub>)</h2>
+  <p>For each of the six 4-fold covers G of PSL<sub>3</sub>(<b>F</b><sub>4</sub>), this code checks whether the generator of H<sup>2</sup>(G, <b>Z</b>/2) lies in B<sub>0</sub>(G) and in Ш<sup>2</sup><sub>ab</sub>(G, <b>Z</b>/2), and that it violates the Galois condition (ii) of Theorem 4.4 for complex conjugation (hence ramifies over the real numbers). It also verifies the explicit pair (τ, γ) used in the proof, whose images in PSL<sub>3</sub>(<b>F</b><sub>4</sub>) generate a quaternion group Q<sub>8</sub>. No package needed.</p>
+  <div class="toolbar">
+    <span class="fname">verif_PSL34_R.g</span>
+    <span>
+      <button type="button" data-copy="real-ramification-src">Copy</button>
+      <button type="button" data-download="real-ramification-src" data-name="verif_PSL34_R.g">Download</button>
+    </span>
+  </div>
+  <pre><code id="real-ramification-src">S:=SL(3,4);
+w:=Z(4);
+hom:=ActionHomomorphism(S,NormedRowVectors(GF(4)^3),OnLines);
+P:=Image(hom);
+epi:=EpimorphismSchurCover(P,[2]);
+F:=Source(epi);
+x:=PreImagesRepresentative(epi,First(GeneratorsOfGroup(SylowSubgroup(P,7)),y-&gt;Order(y)=7));
+act:=FactorCosetAction(F,Subgroup(F,[x^8]));
+Gt:=Image(act);
+pr:=GroupHomomorphismByImages(Gt,P,List(GeneratorsOfGroup(F),g-&gt;Image(act,g)),
+                                   List(GeneratorsOfGroup(F),g-&gt;Image(epi,g)));
+M:=Kernel(pr);
+
+#####################################################
+#####################################################
+## 4-fold cover G=Gt/U of PSL(3,4), double cover Et=Gt/U&#x27; of G representing
+## the generator of H^2(G,Z/2), with kernel &lt;e&gt;.
+## Returns [x in B0(G), x in Sha^2_ab(G,Z/2), x ramified over R,
+##          results for the explicit pair (tau,gamma), lambda=1,w,w^2]
+RealCover:=function(U)
+local Up, hE, Et, e, qG, pEP, K, S2, inB0, inSha, ram, UT, wit;
+
+UT:=function(a,b,c) return [[1,a,b],[0,1,c],[0,0,1]]*One(GF(4)); end;
+
+Up:=First(AllSubgroups(U),H-&gt;Size(H)=2);
+hE:=NaturalHomomorphismByNormalSubgroup(Gt,Up);
+Et:=Image(hE);
+e:=Image(hE,First(Elements(U),u-&gt;not u in Up));
+qG:=NaturalHomomorphismByNormalSubgroup(Et,Group(e));
+pEP:=GroupHomomorphismByImages(Et,P,List(GeneratorsOfGroup(Gt),g-&gt;Image(hE,g)),
+                                    List(GeneratorsOfGroup(Gt),g-&gt;Image(pr,g)));
+K:=Elements(Kernel(pEP));
+
+#####Bogomolov multiplier and Sha^2_ab##################
+S2:=Elements(SylowSubgroup(Et,2));
+inB0:=not ForAny(S2,a-&gt;ForAny(S2,b-&gt;Comm(a,b)=e));
+inSha:=inB0 and not ForAny(S2,a-&gt;a^2=e);
+
+#####Galois condition for complex conjugation##########
+ram:=ForAny(List(ConjugacyClasses(Et),Representative),d-&gt;IsConjugate(Et,d,e*d^-1));
+
+#####Explicit pair (tau,gamma)##########################
+wit:=List([w^0,w,w^2],function(l)
+       local t,g;
+       t:=PreImagesRepresentative(pEP,Image(hom,UT(w^0,0*w,l)));
+       g:=PreImagesRepresentative(pEP,Image(hom,UT(w,0*w,w^2*l)));
+       return Set(K,m-&gt;[Image(qG,g*(t*m)*g^-1)=Image(qG,(t*m)^-1),
+                        g*(t*m)*g^-1=e*(t*m)^-1]);
+     end);
+
+return [inB0,inSha,ram,wit];
+end;
+#####################################################
+#####################################################
+
+List(Filtered(AllSubgroups(M),U-&gt;Size(U)=4 and IsCyclic(M/U)),RealCover);</code></pre>
+</section>
+
+</main>
+<script>
+  document.querySelectorAll("button[data-copy]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var t = document.getElementById(b.dataset.copy).textContent;
+      navigator.clipboard.writeText(t).then(function () {
+        b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+      });
+    });
+  });
+  document.querySelectorAll("button[data-download]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var t = document.getElementById(b.dataset.download).textContent;
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([t + "\n"], {type: "text/plain"}));
+      a.download = b.dataset.name; document.body.appendChild(a); a.click(); a.remove();
+    });
+  });
+</script>
+</body>
+</html>
