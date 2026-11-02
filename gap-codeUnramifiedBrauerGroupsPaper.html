@@ -48,7 +48,7 @@
   <h1>GAP code</h1>
   <p class="sub">Accompanying codes for <em>Unramified Brauer groups of homogeneous spaces with finite
   stabilisers and the Grunwald problem</em>,
-  <a href="https://arxiv.org/abs/2506.02600">arXiv:2506.02600</a>. Codes 1 and 2 require the GAP package <a href="https://www.gap-system.org/Packages/hap.html">HAP</a>.
+  <a href="https://arxiv.org/abs/2506.02600">arXiv:2506.02600</a>. The computations used in the paper (Section 7.2) are those of GAP code 3, which runs in a few minutes and needs no package. GAP codes 1 and 2 give an independent computation of Ш<sup>2</sup><sub>ab</sub>(G, <b>Z</b>/2) with the package <a href="https://www.gap-system.org/Packages/hap.html">HAP</a>; they work in principle but are very expensive in memory for the groups of order 80640 considered here.
   </p>
   <nav><ul>
     <li><a href="#bogomolov-mod-p">GAP code 1 — <code>BogomolovMultiplierModP</code></a></li><li><a href="#example-real">GAP code 2 — the 4-fold covers of PSL<sub>3</sub>(<b>F</b><sub>4</sub>) with non-trivial Bogomolov multiplier</a></li><li><a href="#real-ramification">GAP code 3 — ramification over the field of real numbers for the 4-fold covers of PSL<sub>3</sub>(<b>F</b><sub>4</sub>)</a></li>
@@ -138,7 +138,7 @@ end;
 </section>
 <section id="example-real">
   <h2>GAP code 2 — the 4-fold covers of PSL<sub>3</sub>(<b>F</b><sub>4</sub>) with non-trivial Bogomolov multiplier</h2>
-  <p>Constructs the 4-fold covers G of PSL<sub>3</sub>(<b>F</b><sub>4</sub>) with non-trivial Bogomolov multiplier B<sub>0</sub>(G) and computes Ш<sup>2</sup><sub>ab</sub>(G, <b>Z</b>/2) for them, using GAP code 1 (requires the file <code>BogomolovModP.g</code> in the working directory).</p>
+  <p>Constructs the 4-fold covers G of PSL<sub>3</sub>(<b>F</b><sub>4</sub>) with non-trivial Bogomolov multiplier B<sub>0</sub>(G) and computes Ш<sup>2</sup><sub>ab</sub>(G, <b>Z</b>/2) for them, using GAP code 1 (the file <code>BogomolovModP.g</code> must be in the current directory of GAP, or read with its full path). Warning: this computation is very expensive in memory.</p>
   <div class="toolbar">
     <span class="fname">CodeExempleReel.g</span>
     <span>
@@ -146,7 +146,8 @@ end;
       <button type="button" data-download="example-real-src" data-name="CodeExempleReel.g">Download</button>
     </span>
   </div>
-  <pre><code id="example-real-src">P:=PSL(3,4);
+  <pre><code id="example-real-src">LoadPackage(&quot;hap&quot;);
+P:=PSL(3,4);
 epi:=EpimorphismSchurCover(P,[2]);
 F:=Source(epi);
 x:=PreImagesRepresentative(epi,First(GeneratorsOfGroup(SylowSubgroup(P,7)),y-&gt;Order(y)=7));
@@ -172,11 +173,11 @@ covers:=List(Filtered(AllSubgroups(M),U-&gt;Size(U)=4 and IsCyclic(M/U) and InB0
              U-&gt;Image(SmallerDegreePermutationRepresentation(
                   Image(NaturalHomomorphismByNormalSubgroup(Gt,U)))));
 Read(&quot;BogomolovModP.g&quot;);
-List(covers,G-&gt;BogomolovMultiplierModP(G,2));</code></pre>
+Display(List(covers,G-&gt;BogomolovMultiplierModP(G,2)));</code></pre>
 </section>
 <section id="real-ramification">
   <h2>GAP code 3 — ramification over the field of real numbers for the 4-fold covers of PSL<sub>3</sub>(<b>F</b><sub>4</sub>)</h2>
-  <p>For each of the six 4-fold covers G of PSL<sub>3</sub>(<b>F</b><sub>4</sub>), this code checks whether the generator of H<sup>2</sup>(G, <b>Z</b>/2) lies in B<sub>0</sub>(G) and in Ш<sup>2</sup><sub>ab</sub>(G, <b>Z</b>/2), and that it violates the Galois condition (ii) of Theorem 4.4 for complex conjugation (hence ramifies over the real numbers). It also verifies the explicit pair (τ, γ) used in the proof, whose images in PSL<sub>3</sub>(<b>F</b><sub>4</sub>) generate a quaternion group Q<sub>8</sub>. No package needed.</p>
+  <p>For each of the six 4-fold covers G of PSL<sub>3</sub>(<b>F</b><sub>4</sub>), this code checks whether the generator of H<sup>2</sup>(G, <b>Z</b>/2) lies in B<sub>0</sub>(G) and in Ш<sup>2</sup><sub>ab</sub>(G, <b>Z</b>/2), and that it violates the Galois condition (ii) of Theorem 4.4 for complex conjugation (hence ramifies over the real numbers). It also verifies the explicit pair (τ, γ) used in the proof, whose images in PSL<sub>3</sub>(<b>F</b><sub>4</sub>) generate a quaternion group Q<sub>8</sub>.</p>
   <div class="toolbar">
     <span class="fname">verif_PSL34_R.g</span>
     <span>
@@ -239,9 +240,8 @@ end;
 #####################################################
 #####################################################
 
-List(Filtered(AllSubgroups(M),U-&gt;Size(U)=4 and IsCyclic(M/U)),RealCover);</code></pre>
+Display(List(Filtered(AllSubgroups(M),U-&gt;Size(U)=4 and IsCyclic(M/U)),RealCover));</code></pre>
 </section>
-
 </main>
 <script>
   document.querySelectorAll("button[data-copy]").forEach(function (b) {
